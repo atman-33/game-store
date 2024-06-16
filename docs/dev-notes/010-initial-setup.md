@@ -4,8 +4,6 @@
 
 [ASP.NET Core Full Course For Beginners](https://www.youtube.com/watch?v=AhAxLiGC7Pc)
 
-NOTE: 23:57まで視聴
-
 ## 前提
 
 下記をインストール
@@ -20,12 +18,6 @@ NOTE: 23:57まで視聴
 - C# Dev Kit
 - REST Client
 - SQLite
-
-> 補足. コマンドからdotnetで作成可能なテンプレートを確認する方法
-
-```powershell
-dotnet new list
-```
 
 ## プロジェクト作成
 
