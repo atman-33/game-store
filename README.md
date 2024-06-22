@@ -4,4 +4,4 @@
 
 [ASP.NET Core Full Course For Beginners](https://www.youtube.com/watch?v=AhAxLiGC7Pc)
 
-NOTE: 1:28:30 まで視聴
+NOTE: 1:39:04 まで視聴
