@@ -17,7 +17,8 @@ public static class GamesEndpoints
   public static RouteGroupBuilder MapGamesEndpoints(this WebApplication app)
   {
     // NOTE: MapGroup に "games" を設定することにより、MapGet などの設定で "games" を省略できる 
-    var group = app.MapGroup("games");
+    // NOTE: WithParameterValidation は、DtoアノテーションとMinimalApis.Extensionsで値をチェックをする。
+    var group = app.MapGroup("games").WithParameterValidation();
 
     // GET /games
     group.MapGet("/", () => games);
@@ -34,6 +35,12 @@ public static class GamesEndpoints
     // POST /games
     group.MapPost("/", (CreateGameDto newGame) =>
     {
+      // NOTE: 下記のように入力値チェックはここでは行わず、DtoアノテーションとMinimalApis.Extensionsでチェックをする。
+      // if (string.IsNullOrEmpty(newGame.Name))
+      // {
+      //   return Results.BadRequest("Name is required");
+      // }
+
       GameDto game = new(
         games.Count + 1,
         newGame.Name,
