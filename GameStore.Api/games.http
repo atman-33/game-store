@@ -20,9 +20,8 @@ PUT http://localhost:5280/games/1
 Content-Type: application/json
 
 {
-  "id": 1,
   "name": "xxx",
-  "genre": "zzz",
+  "genreId": 1,
   "price": 9.99,
   "releaseDate": "2000-03-03"
 }

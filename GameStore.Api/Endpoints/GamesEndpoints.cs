@@ -2,20 +2,13 @@
 using GameStore.Api.Dtos;
 using GameStore.Api.Entities;
 using GameStore.Api.Mapping;
+using Microsoft.EntityFrameworkCore;
 
 namespace GameStore.Api.Endpoints;
 
 public static class GamesEndpoints
 {
   const string GetGameEndpointName = "GetGame";
-
-  private static readonly List<GameDto> games = [
-    new GameDto(1, "The Legend of Zelda: Breath of the Wild", "Adventure", 59.99m, new DateOnly(2017, 3, 3)),
-    new GameDto(2, "Super Mario Odyssey", "Platformer", 49.99m, new DateOnly(2017, 10, 27)),
-    new GameDto(3, "Red Dead Redemption 2", "Action", 39.99m, new DateOnly(2018, 10, 26)),
-    new GameDto(4, "Minecraft", "Sandbox", 29.99m, new DateOnly(2011, 11, 18)),
-    new GameDto(5, "The Witcher 3: Wild Hunt", "RPG", 39.99m, new DateOnly(2015, 5, 19))
-  ];
 
   public static RouteGroupBuilder MapGamesEndpoints(this WebApplication app)
   {
@@ -24,19 +17,25 @@ public static class GamesEndpoints
     var group = app.MapGroup("games").WithParameterValidation();
 
     // GET /games
-    group.MapGet("/", () => games);
+    group.MapGet("/", async (GameStoreContext dbContext) =>
+      await dbContext.Games
+        .Include(game => game.Genre)  // NOTE: Genre の情報を含める（Genre.Nameを返すため）
+        .Select(game => game.ToGameSummaryDto())
+        .AsNoTracking() // NOTE: EF Core によるデータの変更追跡を無視する（パフォーマンス向上のため）
+        .ToListAsync()  // NOTE: 非同期処理
+        );
 
     // GET /games/{id}
-    group.MapGet("/{id}", (int id) =>
+    group.MapGet("/{id}", async (int id, GameStoreContext dbContext) =>
     {
-      GameDto? game = games.Find(game => game.Id == id);
+      Game? game = await dbContext.Games.FindAsync(id);
 
-      return game is null ? Results.NotFound() : Results.Ok(game);
+      return game is null ? Results.NotFound() : Results.Ok(game.ToGameDetailsDto());
     })
     .WithName(GetGameEndpointName);
 
     // POST /games
-    group.MapPost("/", (CreateGameDto newGame, GameStoreContext dbContext) =>
+    group.MapPost("/", async (CreateGameDto newGame, GameStoreContext dbContext) =>
     {
       // NOTE: 下記のように入力値チェックはここでは行わず、DtoアノテーションとMinimalApis.Extensionsでチェックをする。
       // if (string.IsNullOrEmpty(newGame.Name))
@@ -45,41 +44,35 @@ public static class GamesEndpoints
       // }
 
       Game game = newGame.ToEntity();
-      game.Genre = dbContext.Genres.Find(newGame.GenreId);
 
       dbContext.Games.Add(game);
-      dbContext.SaveChanges();  // NOTE: コミット
+      await dbContext.SaveChangesAsync();  // NOTE: コミット
 
       // NOTE: 201レスポンスを生成
       // GetGameEndpointName の名前付きルートを使用して、新しいゲームを返している。
-      return Results.CreatedAtRoute(GetGameEndpointName, new { id = game.Id }, game.ToDto());
+      return Results.CreatedAtRoute(GetGameEndpointName, new { id = game.Id }, game.ToGameDetailsDto());
     });
 
     // PUT /games/{id}
-    group.MapPut("/{id}", (int id, UpdateGameDto updatedGame) =>
+    group.MapPut("/{id}", async (int id, UpdateGameDto updatedGame, GameStoreContext dbContext) =>
     {
-      var index = games.FindIndex(game => game.Id == id);
+      var existingGame = await dbContext.Games.FindAsync(id);
 
-      if (index == -1)
+      if (existingGame is null)
       {
         return Results.NotFound();
       }
 
-      games[index] = new GameDto(
-        id,
-        updatedGame.Name,
-        updatedGame.Genre,
-        updatedGame.Price,
-        updatedGame.ReleaseDate
-      );
+      dbContext.Entry(existingGame).CurrentValues.SetValues(updatedGame.ToEntity(id));
+      await dbContext.SaveChangesAsync();
 
       return Results.NoContent();
     });
 
     // DELETE /games/{id}
-    group.MapDelete("/{id}", (int id) =>
+    group.MapDelete("/{id}", async (int id, GameStoreContext dbContext) =>
     {
-      games.RemoveAll(game => game.Id == id);
+      await dbContext.Games.Where(game => game.Id == id).ExecuteDeleteAsync();
 
       return Results.NoContent();
     });

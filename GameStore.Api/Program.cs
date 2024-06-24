@@ -1,3 +1,4 @@
+using GameStore.Api;
 using GameStore.Api.Data;
 using GameStore.Api.Endpoints;
 
@@ -13,8 +14,9 @@ var app = builder.Build();
 
 // NOTE: Gameに関するエンドポイントをマップ
 app.MapGamesEndpoints();
+app.MapGenresEndpoints();
 
 // NOTE: データベースをマイグレーション
-app.MigrateDb();
+await app.MigrateDbAsync();
 
 app.Run();
