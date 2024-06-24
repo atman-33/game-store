@@ -35,11 +35,14 @@ public static class GameMapping
 
 ## エンドポイントを修正
 
+各エンドポイントを修正する。
+
 **ポイント**  
 
 - HTTPメソッド登録に、コンテキストをDIする。
 - レスポンスはDTO（レスポンス仕様を遵守するため）で返す。
 - Maggpingを利用して、DTOとEntity変換を効率化する。
+- 非同期処理に変更する。
 
 e.g.  
 
@@ -47,7 +50,7 @@ e.g.
 
 ```cs
     // POST /games
-    group.MapPost("/", (CreateGameDto newGame, GameStoreContext dbContext) =>
+    group.MapPost("/", async (CreateGameDto newGame, GameStoreContext dbContext) =>
     {
       // NOTE: 下記のように入力値チェックはここでは行わず、DtoアノテーションとMinimalApis.Extensionsでチェックをする。
       // if (string.IsNullOrEmpty(newGame.Name))
@@ -56,13 +59,12 @@ e.g.
       // }
 
       Game game = newGame.ToEntity();
-      game.Genre = dbContext.Genres.Find(newGame.GenreId);
 
       dbContext.Games.Add(game);
-      dbContext.SaveChanges();  // NOTE: コミット
+      await dbContext.SaveChangesAsync();  // NOTE: コミット
 
       // NOTE: 201レスポンスを生成
       // GetGameEndpointName の名前付きルートを使用して、新しいゲームを返している。
-      return Results.CreatedAtRoute(GetGameEndpointName, new { id = game.Id }, game.ToDto());
+      return Results.CreatedAtRoute(GetGameEndpointName, new { id = game.Id }, game.ToGameDetailsDto());
     });
 ```
